@@ -60,19 +60,36 @@ class TabFilterCommand(sublime_plugin.WindowCommand):
                 tabs,
                 self.on_done,
                 on_highlight=self.on_highlighted,
+                flags=sublime.WANT_EVENT,
                 selected_index=self.current_tab_idx
             )
             return
 
         self.window.show_quick_panel(tabs, self.on_done)
 
-    def on_done(self, index: int) -> None:
+    def on_done(self, index: int, event) -> None:
         """Callback handler to move focus to the selected tab index."""
         if index == -1 and self.current_tab_idx != -1:
             # If the selection was quit, re-focus the last selected Tab
             self.window.focus_view(self.views[self.current_tab_idx])
         elif index > -1 and index < len(self.views):
-            self.window.focus_view(self.views[index])
+            # TODO find a workaround for unsaved tabs not supported (and replace self.views[index].file_name())
+            works = self.current_tab_idx != -1 and self.views[index].file_name() is not None
+            if event["modifier_keys"].get("shift", False) == True and works:
+                """shift adds view to the right"""
+                self.window.focus_view(self.views[self.current_tab_idx])
+                self.window.open_file(self.views[index].file_name(), sublime.ADD_TO_SELECTION)
+            if event["modifier_keys"].get("ctrl", False) == True and works:
+                """ctrl replaces views to the right (API 4100) """
+                self.window.focus_view(self.views[self.current_tab_idx])
+                self.window.open_file(self.views[index].file_name(), sublime.ADD_TO_SELECTION, sublime.CLEAR_TO_RIGHT)
+            if event["modifier_keys"].get("alt", False) == True and works:
+                """alt replaces most recent  """
+                # TODO doesn't seem to work work, replaces wrong if I am not mistaken
+                self.window.focus_view(self.views[self.current_tab_idx])
+                self.window.open_file(self.views[index].file_name(), sublime.ADD_TO_SELECTION, sublime.REPLACE_MRU)
+            else:
+                self.window.focus_view(self.views[index])
 
     def on_highlighted(self, index: int) -> None:
         """Callback handler to focus the currently highlighted Tab."""
