@@ -74,16 +74,20 @@ class TabFilterCommand(sublime_plugin.WindowCommand):
             self.window.focus_view(self.views[self.current_tab_idx])
         elif index > -1 and index < len(self.views):
             # TODO find a workaround for unsaved tabs not supported (and replace self.views[index].file_name())
-            works = self.current_tab_idx != -1 and self.views[index].file_name() is not None
-            if event["modifier_keys"].get("shift", False) == True and works:
+            not_transient = self.views[index].file_name() is not None
+            other_view = self.current_tab_idx != index
+            side_by_side_enabled = self.current_tab_idx != -1 and not_transient  and other_view
+            modifiers = event["modifier_keys"].keys()
+
+            if "shift" in modifiers and side_by_side_enabled:
                 """shift adds view to the right"""
                 self.window.focus_view(self.views[self.current_tab_idx])
                 self.window.open_file(self.views[index].file_name(), sublime.ADD_TO_SELECTION)
-            if event["modifier_keys"].get("ctrl", False) == True and works:
+            elif "primary" in modifiers and side_by_side_enabled:
                 """ctrl replaces views to the right (API 4100) """
                 self.window.focus_view(self.views[self.current_tab_idx])
                 self.window.open_file(self.views[index].file_name(), sublime.ADD_TO_SELECTION, sublime.CLEAR_TO_RIGHT)
-            if event["modifier_keys"].get("alt", False) == True and works:
+            elif "alt" in modifiers and side_by_side_enabled:
                 """alt replaces most recent  """
                 # TODO doesn't seem to work work, replaces wrong if I am not mistaken
                 self.window.focus_view(self.views[self.current_tab_idx])
